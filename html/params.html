@@ -56,7 +56,7 @@
 
       <p>For example: <a href="https://appr.tc/?hd=true&amp;stereo=true&amp;debug=loopback">https://appr.tc/?hd=true&amp;stereo=true&amp;debug=loopback</a></p>
 
-      <p>The file using the parameters is <a href="https://github.com/webrtc/apprtc/blob/master/src/app_engine/apprtc.py" title="apprtc.py file in AppRTC repo">apprtc.py</a>. More Google-specific parameters are available from the <a href="https://chromium.googlesource.com/external/webrtc/+/master/webrtc/api/mediaconstraintsinterface.h" title="mediaconstraintsinterface.h">MediaConstraints interface</a>.</p>
+      <p>The file using the parameters is <a href="https://github.com/webrtc/apprtc/blob/master/src/app_engine/apprtc.py" title="apprtc.py file in AppRTC repo">apprtc.py</a>. More Google-specific parameters are available from the <a href="https://chromium.googlesource.com/external/webrtc/+/master/api/mediaconstraintsinterface.h" title="mediaconstraintsinterface.h">MediaConstraints interface</a>.</p>
 
       <p>For more information see <a href="http://gingertech.net/2014/03/19/apprtc-googles-webrtc-test-app-and-its-parameters/">AppRTC : Google's WebRTC test app and its parameters</a>.</p>
 
@@ -69,6 +69,7 @@
         <tr><td><a href="https://appr.tc?stereo=true&amp;audio=echoCancellation=false">stereo=true&amp;audio=echoCancellation=false</a></td><td>Turn on stereo audio</td></tr>
         <tr><td><a href="https://appr.tc?debug=loopback">debug=loopback</a></td><td>Connect to yourself, e.g. to test firewalls</td></tr>
         <tr><td><a href="https://appr.tc?ts=https://turn.example.org">ts=[turnserver]</a></td><td>Set TURN server different from the default</td></tr>
+        <tr><td><a href="https://appr.tc?apikey=example-key">apikey=[apikey]</a></td><td>Turn server API key</td></tr>
         <tr><td><a href="https://appr.tc?audio=true&amp;video=false">audio=true&amp;video=false</a></td><td>Audio only</td></tr>
         <tr><td><a href="https://appr.tc?audio=false">audio=false</a></td><td>Video only</td></tr>
         <tr><td><a href="https://appr.tc?audio=echoCancellation=false">audio=echoCancellation=false</a></td><td>Disable all audio processing</td></tr>
@@ -83,8 +84,8 @@
         <tr><td><a href="https://appr.tc?ipv6=true">ipv6=true</a></td><td>Enable IPv6</td></tr>
         <tr><td><a href="https://appr.tc?arbr=48000">arbr=[bitrate]</a></td><td>Set audio receive bitrate, kbps</td></tr>
         <tr><td><a href="https://appr.tc?asbr=16000">asbr=[bitrate]</a></td><td>Set audio send bitrate</td></tr>
-        <tr><td><a href="https://appr.tc?vsbr=1000">vsbr=[bitrate]</a></td><td>Set video receive bitrate</td></tr>
-        <tr><td><a href="https://appr.tc?vrbr=8000">vrbr=[bitrate]</a></td><td>Set video send bitrate</td></tr>
+        <tr><td><a href="https://appr.tc?vrbr=8000">vrbr=[bitrate]</a></td><td>Set video receive bitrate</td></tr>
+        <tr><td><a href="https://appr.tc?vsbr=1000">vsbr=[bitrate]</a></td><td>Set video send bitrate</td></tr>
         <tr><td><a href="https://appr.tc?videofec=false">videofec=false</a></td><td>Turn off video FEC</td></tr>
         <tr><td><a href="https://appr.tc?opusfec=false">opusfec=false</a></td><td>Turn off Opus FEC</td></tr>
         <tr><td><a href="https://appr.tc?opusdtx=true">opusdtx=true</a></td><td>Turn on Opus DTX</td></tr>
