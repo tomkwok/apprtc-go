@@ -1,82 +1,74 @@
-# apprtc-go
-apprtc demo with golang. It's rewrite project WebRTC(https://github.com/webrtc/apprtc)  with golang
+# AppRTC server in Go
 
-# How to run.
-1. Setup the STUN/TURN server and run.
-coturn[https://github.com/coturn/coturn]
+[tomkwok/apprtc-go](https://github.com/tomkwok/apprtc-go) is a fork of [daozhao/apprtc-go](https://github.com/daozhao/apprtc-go), which is a fork of [webrtc/apprtc](https://github.com/webrtc/apprtc) to rewrite the Node.js server for [AppRTC](https://github.com/webrtc/apprtc) in Golang.
+
+This fork of mine includes the following changes:
+
+- Updated JavaScript files from upstream [AppRTC](https://github.com/webrtc/apprtc) to fix compatibility with the latest version of Safari
+- Added functionality to dismiss red info box on clicking (which is useful for hiding error messages in Safari)
+- Removed fallback to `computeengineondemand.appspot.com` TURN server to ensure only TURN server specified in command line argument is used
+- Changed Go server to take address:port string instead of port number integer in command line argument (which is necessary to configure server to listen on an address other than loopback/localhost if the server is not served behind a reverse proxy)
+- Removed redundant command line options, comments and code in Go server
+- Added more detailed documentation and usage example
+- Updated `.gitignore` to ignore binary `apprtc-go` built
+- (Todo) Rewrite Go server `apprtc.go` to re-organize code
+
+Note that the official AppRTC documentation for query parameters to the web app can be found on the hosted site at `/params.html`.
+
+Note that AppRTC supports two people only in a room.
+
+## Building
+
+To build the AppRTC Go server, run the following commands:
+
 ```
-turnserver -v  --user=daozhao --realm apprtc --static-auth-secret=654321 
-```
-2. Install apprtc-go and run.
-```
-go get github.com/daozhao/apprtc-go
-cd $GOPATH/src/github.com/daozhao/apprtc-go/
+go get
 go build -o apprtc-go apprtc.go
-./apprtc-go -cert=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.pem \
-            -key=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.key \
-            -stun=192.168.2.170:3478 \
-            -turn=192.168.2.170:3478 -turn-username=daozhao -turn-static-auth-secret=654321 \
-            -httpport=8080 -httpsport=8888
-```
-Open chrome and enter URL(https://XXX.XXX.XXX.XXX:8888 or https://XXX.XXX.XXX.XXX:8080 ).
-
-warnning:Replace the IP(XXX.XXX.XXX.XXX) with your real IP address.
-
-# Other test
-1. Only test stun
-```
-turnserver --no-auth --stun-only -v
-./apprtc-go -cert=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.pem \
-                      -key=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.key  \
-                      -httpport=8080 -httpsport=8888 \
-                      -stun=192.168.2.170:3478 
 ```
 
-2. Test turn with static username and password
+Cross-compiling example for ARMv6 Linux:
+
 ```
-turnserver -v  --user=daozhao:12345 --realm apprtc  --no-stun
-./apprtc-go -cert=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.pem \
-            -key=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.key \
-            -httpport=8080 -httpsport=8888 \
-            -turn=192.168.2.170:3478 -turn-username=daozhao -turn-password=12345 
+go get
+env GOOS=linux GOARCH=arm GOARM=6 go build -o apprtc-go apprtc.go
 ```
 
-3. Test turn with auth-secret
-```
-turnserver -v  --user=daozhao  --realm apprtc --static-auth-secret=654321  --no-stun
-./apprtc-go -cert=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.pem \
-            -key=$GOPATH/src/github.com/daozhao/apprtc-go/mycert.key \
-            -httpport=8080 -httpsport=8888 \
-            -turn=192.168.2.170:3478 -turn-username=daozhao -turn-static-auth-secret=654321 
-```
-warnning:Please put two devices in different networks so that they cannot access each other.
+## Usage
 
-# Help
+The AppRTC Go server `apprtc-go` is intended to be used with a STUN/TURN server such as [coturn](https://github.com/coturn/coturn).
+
 ```
-$GOPATH/bin/apprtc-go --help
-Usage of /home/daozhao/Documents/SourceCode/goPath/bin/apprtc-go:
+Usage of ./apprtc-go:
   -cert string
-    	cert pem file  (default "./mycert.pem")
-  -httpport int
-    	The http port that the server listens on (default 8080)
-  -httpsport int
-    	The https port that the server listens on (default 8888)
+      https cert pem file (default "./fullchain.pem")
+  -http string
+      address:port that https server listens on (default ":8080")
+  -https string
+      address:port that http server listens on (default ":8888")
   -key string
-    	cert key file  (default "./mycert.key")
-  -room-server string
-    	The origin of the room server (default "https://appr.tc")
+      https cert key file (default "./privkey.pem")
   -stun string
-    	Enter stun server ip:port,for example 192.168.2.170:3478,default is null
+      stun server host:port
   -turn string
-    	Enter turn server ip:port,for example 192.168.2.170:3478,default is null
+      turn server host:port
   -turn-password string
-    	Enter turn server user password,default is null
+      turn server user password (default "password")
   -turn-static-auth-secret string
-    	Enter turn server static auth secret,default is null
+      turn server static auth secret
   -turn-username string
-    	Enter turn server username,default is null
+      turn server username (default "username")
 ```
-# Related project
- apprtc-electron[https://github.com/daozhao/apprtc-electron]
 
+Example usage of `apprtc-go`:
 
+```
+./apprtc-go
+  --https="192.168.1.111:443"
+  --cert="/path/to/combined.pem"
+  --key="/path/to/combined.pem"
+  --turn-username="user_in_turnserver_conf"
+  --turn-password="user_in_turnserver_conf"
+  --turn-static-auth-secret="static-auth-secret_in_turnserver_conf"
+  --turn="example.com:5349"
+  --stun="example.com:5349"
+```

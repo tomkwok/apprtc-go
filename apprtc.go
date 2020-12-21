@@ -17,26 +17,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daozhao/apprtc-go/collider"
+	"github.com/tomkwok/apprtc-go/collider"
 	// "reflect"
 )
-
-/*
-const (
-	CERT        = "./mycert.pem"
-	KEY         = "./mycert.key"
-	wssHostPort = "8089"
-	wssHost     = "192.168.2.30"
-	PORT        = 8888
-)
-*/
 
 var TURN_SERVER_OVERRIDE string
 
 const STUN_SERVER_FMT = `
 {
     "urls": [
-      "stun:%s"
+      "stun:%s?transport=udp"
     ]
   }
 `
@@ -49,47 +39,14 @@ const TURN_SERVER_FMT = `
 	"credential": "%s"
   }
 `
-const TURN_SERVER_FMT_TEST = `
-{
-    "urls": [
-      "turn:%s?transport=udp"
-    ],
-	"credential": "%s:%s"
-  }
-`
 
-var TURN_BASE_URL string = "https://computeengineondemand.appspot.com"
+var TURN_BASE_URL string = ""
 var TURN_URL_TEMPLATE string = `"%s/turn?username=%s&key=%s"`
-var CEOD_KEY string = "4080218913"
+var CEOD_KEY string = ""
 
 var ICE_SERVER_BASE_URL string = "https://"
-var ICE_SERVER_URL_TEMPLATE string = `"%s://%s/iceconfig?key=%s"`
-var ICE_SERVER_API_KEY string = "4080218913" //os.environ.get('ICE_SERVER_API_KEY')
-
-var CALLSTATS_PARAMS string = `{"appSecret": "none", "appId": "none"}`
-
-/*
-{
-  'appId': os.environ.get('CALLSTATS_APP_ID'),
-  'appSecret': os.environ.get('CALLSTATS_APP_SECRET')
-}`
-*/
-/*
-var WSS_INSTANCE_HOST_KEY string = "host_port_pair"
-var WSS_INSTANCE_NAME_KEY string = "vm_name"
-var WSS_INSTANCE_ZONE_KEY string = "zone"
-var WSS_INSTANCES string = `[{
-    # WSS_INSTANCE_HOST_KEY: 'apprtc-ws.webrtc.org:443',
-    WSS_INSTANCE_HOST_KEY: '192.168.2.97:8089',
-    WSS_INSTANCE_NAME_KEY: 'wsserver-std',
-    WSS_INSTANCE_ZONE_KEY: 'us-central1-a'
-}, {
-    # WSS_INSTANCE_HOST_KEY: 'apprtc-ws-2.webrtc.org:443',
-    WSS_INSTANCE_HOST_KEY: '192.168.2.97:8089',
-    WSS_INSTANCE_NAME_KEY: 'wsserver-std-2',
-    WSS_INSTANCE_ZONE_KEY: 'us-central1-f'
-}]`
-*/
+var ICE_SERVER_URL_TEMPLATE string = `iceconfig?key=%s`
+var ICE_SERVER_API_KEY string = "" //os.environ.get('ICE_SERVER_API_KEY')
 
 const (
 	RESPONSE_ERROR            = "ERROR"
@@ -248,7 +205,7 @@ func roomPageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("roomPageHandler host:", r.Host, "url:", r.URL.RequestURI(), " path:", r.URL.Path, " raw query:", r.URL.RawQuery)
 	room_id := strings.Replace(r.URL.Path, "/r/", "", 1)
 	room_id = strings.Replace(room_id, "/", "", -1)
-	//todo: 检查房间是否已经超过两人。
+	// todo check whether the room is full with two users
 	log.Println("room page room_id:", room_id)
 	t, err := template.ParseFiles("./html/index_template.html")
 	// t, err := template.ParseFiles("./html/params.html")
@@ -362,7 +319,7 @@ func joinPageHandler(w http.ResponseWriter, r *http.Request) {
 	params["result"] = resultStr
 	params["params"] = returnData
 
-	//todo 输出json数据返回
+	//todo output returned json data
 	enc := json.NewEncoder(w)
 	enc.Encode(&params)
 }
@@ -511,9 +468,13 @@ func iceconfigPageHandler(w http.ResponseWriter, r *http.Request) {
 		if len(turnServer) > 0 {
 			turnServer += ","
 		}
-		username, password := getTurnAuth()
-		turnServer += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, username, password)
-		// turnServer += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, "teninefingers", "4080218913")
+
+		if len(*flagTurnSecret) > 0 {
+			timestamp := time.Now().Unix() + 60*60
+			turnUsername := strconv.Itoa(int(timestamp)) + ":" + *flagTurnUser
+			expectedMAC := Hmac(*flagTurnSecret, turnUsername)
+			turnServer += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, turnUsername, expectedMAC)
+		}
 	}
 	turnServer = `{"iceServers":[` + turnServer + "]}"
 	log.Println("turnServer:", turnServer)
@@ -527,22 +488,8 @@ func iceconfigPageHandler(w http.ResponseWriter, r *http.Request) {
 	enc.Encode(&dat)
 }
 
-func getTurnAuth() (username, password string) {
-	if len(*flagTurnSecret) > 0 {
-		timestamp := time.Now().Unix() + 60*60
-		turnUsername := strconv.Itoa(int(timestamp)) + ":" + *flagTurnUser
-		expectedMAC := Hmac(*flagTurnSecret, turnUsername)
-		return turnUsername, expectedMAC
-	}
-
-	return *flagTurnUser, *flagTurnPassword
-}
-
 func Hmac(key, data string) string {
 	// https://stackoverflow.com/questions/30745153/turn-server-for-webrtc-with-rest-api-authentication?noredirect=1&lq=1
-	// key: my_secret
-	// user: 1433895918506:my_user_name
-	// 1Dj9XZ5fwvKS6YoQZOoORcFnXaI
 	hmac := hmac.New(sha1.New, []byte(key))
 	hmac.Write([]byte(data))
 	return base64.StdEncoding.EncodeToString(hmac.Sum(nil))
@@ -596,20 +543,21 @@ func getRoomParameters(r *http.Request, room_id, client_id string, is_initiator 
 	// log.Println(dat)
 	data["turn_server_override"] = dat // template.JS(strings.Replace(TURN_SERVER_OVERRIDE,"\n","",-1) )
 
-	username := fmt.Sprintf("%d", rand.Intn(1000000000)) //todo:
+	username := fmt.Sprintf("%d", rand.Intn(1000000000))
 	if len(client_id) > 0 {
 		username = client_id
 	}
 	data["turn_url"] = template.JS(fmt.Sprintf(TURN_URL_TEMPLATE, TURN_BASE_URL, username, CEOD_KEY))
 
 	// ice_server_base_url := getRequest(r, "ts", ICE_SERVER_BASE_URL)
-	if isTLS(r) {
-		// data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "https", r.Host, httpsHostPort, ICE_SERVER_API_KEY))
-		data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "https", r.Host, ICE_SERVER_API_KEY))
-	} else {
-		// data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "http", r.Host, httpHostPort, ICE_SERVER_API_KEY))
-		data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "http", r.Host, ICE_SERVER_API_KEY))
-	}
+	data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, ICE_SERVER_API_KEY))
+	// if isTLS(r) {
+	// 	// data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "https", r.Host, httpsHostPort, ICE_SERVER_API_KEY))
+	// 	data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "https", r.Host, ICE_SERVER_API_KEY))
+	// } else {
+	// 	// data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "http", r.Host, httpHostPort, ICE_SERVER_API_KEY))
+	// 	data["ice_server_url"] = template.JS(fmt.Sprintf(ICE_SERVER_URL_TEMPLATE, "http", r.Host, ICE_SERVER_API_KEY))
+	// }
 
 	data["ice_server_transports"] = getRequest(r, "tt", "")
 
@@ -627,20 +575,16 @@ func getRoomParameters(r *http.Request, room_id, client_id string, is_initiator 
 	data["ddtls"] = dtls
 
 	include_rtstats_js := ""
-	//todo:
-	//include_rtstats_js = "<script src=\"/js/rtstats.js\"></script><script src=\"/pako/pako.min.js\"></script>"
 	data["include_rtstats_js"] = include_rtstats_js
 
 	wss_url, wss_post_url := getWssParameters(r)
 	data["wss_url"] = template.URL(wss_url)
 	data["wss_post_url"] = template.URL(wss_post_url)
 
-	//  bypass_join_confirmation = 'BYPASS_JOIN_CONFIRMATION' in os.environ and os.environ['BYPASS_JOIN_CONFIRMATION'] == 'True'
 	bypass_join_confirmation := false
 	data["bypass_join_confirmation"] = bypass_join_confirmation
 
-	data["version_info"] = template.JS(`{"time": "Thu Feb 9 15:54:29 2017 +0800", "branch": "master", "gitHash": "9d2692c3a32b1213584ec01cb5f12d462cb82d3e"}`)
-	data["callstats_params"] = template.JS(strings.Replace(CALLSTATS_PARAMS, "\n", "", -1))
+	data["version_info"] = template.JS(`{}`)
 
 	if len(room_id) > 0 {
 		var room_link string
@@ -668,27 +612,27 @@ func getRoomParameters(r *http.Request, room_id, client_id string, is_initiator 
 // var useTls bool
 var wssHostPort int
 var wsHostPort int
-var httpsHostPort int
-var httpHostPort int
+var httpsHostPort string
+var httpHostPort string
 
 // var wssHost string
 
-// var flagUseTls = flag.Bool("tls", true, "whether TLS is used")
+// var flagUseTls = flag.Bool("tls", true, "TLS is used or not")
 // var flagWssHostPort = flag.Int("wssport", 1443, "The TCP port that the server listens on")
 // var flagWsHostPort = flag.Int("wsport", 2443, "The TCP port that the server listens on")
-var flagHttpsHostPort = flag.Int("httpsport", 8888, "The https port that the server listens on")
-var flagHttpHostPort = flag.Int("httpport", 8080, "The http port that the server listens on")
+var flagHttpsHostPort = flag.String("https", ":8888", "address:port that http server listens on")
+var flagHttpHostPort = flag.String("http", ":8080", "address:port that https server listens on")
 
-// var flagWssHost = flag.String("host", "192.168.2.30", "Enter your hostname or host ip")
-var flagstun = flag.String("stun", "", "Enter stun server ip:port,for example 192.168.2.170:3478,default is null")
-var flagturn = flag.String("turn", "", "Enter turn server ip:port,for example 192.168.2.170:3478,default is null")
-var flagTurnUser = flag.String("turn-username", "", "Enter turn server username,default is null")
-var flagTurnPassword = flag.String("turn-password", "", "Enter turn server user password,default is null")
-var flagTurnSecret = flag.String("turn-static-auth-secret", "", "Enter turn server static auth secret,default is null")
-var roomSrv = flag.String("room-server", "https://appr.tc", "The origin of the room server")
+// var flagWssHost = flag.String("host", "192.168.2.30", "your hostname or host ip")
+var flagstun = flag.String("stun", "", "stun server host:port")
+var flagturn = flag.String("turn", "", "turn server host:port")
+var flagTurnUser = flag.String("turn-username", "username", "turn server username")
+var flagTurnPassword = flag.String("turn-password", "password", "turn server user password")
+var flagTurnSecret = flag.String("turn-static-auth-secret", "", "turn server static auth secret")
+// var roomSrv = flag.String("room-server", "https://appr.tc", "origin of room server")
 
-var CERT = flag.String("cert", "./mycert.pem", "cert pem file ")
-var KEY = flag.String("key", "./mycert.key", "cert key file ")
+var CERT = flag.String("cert", "./fullchain.pem", "https cert pem file")
+var KEY = flag.String("key", "./privkey.pem", "https cert key file")
 
 var ice_server_url string
 
@@ -703,39 +647,44 @@ func main() {
 
 	if len(*flagturn) > 0 {
 		if len(*flagTurnUser) == 0 {
-			log.Printf("If set turn server,must has turn-username")
+			log.Printf("If turn server is set, turn-username must be set")
 			return
 		}
 
 		if len(*flagTurnPassword) == 0 && len(*flagTurnSecret) == 0 {
-			log.Printf("If set turn server,must set turn-password or turn-static-auth-secret")
+			log.Printf("If turn server is set, turn-password or turn-static-auth-secret must be set")
 			return
 		}
-
 	}
 
-	// TURN_SERVER_OVERRIDE += "["
-	// if len(*flagstun) > 0 {
-	// 	TURN_SERVER_OVERRIDE += fmt.Sprintf(STUN_SERVER_FMT, *flagstun)
-	// }
-	// if len(*flagturn) > 0 {
-	// 	if len(TURN_SERVER_OVERRIDE) > 0 {
-	// 		TURN_SERVER_OVERRIDE += ","
-	// 	}
-	// 	TURN_SERVER_OVERRIDE += fmt.Sprintf(TURN_SERVER_FMT, *flagturn)
-	// }
+	if len(*flagstun) > 0 {
+		TURN_SERVER_OVERRIDE += fmt.Sprintf(STUN_SERVER_FMT, *flagstun)
+	}
+	if len(*flagturn) > 0 {
+		if len(TURN_SERVER_OVERRIDE) > 0 {
+			TURN_SERVER_OVERRIDE += ","
+		}
+
+		if len(*flagTurnSecret) > 0 {
+			timestamp := time.Now().Unix() + 60*60
+			turnUsername := strconv.Itoa(int(timestamp)) + ":" + *flagTurnUser
+			expectedMAC := Hmac(*flagTurnSecret, turnUsername)
+			TURN_SERVER_OVERRIDE += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, turnUsername, expectedMAC)
+		}
+	}
 	TURN_SERVER_OVERRIDE = "[" + TURN_SERVER_OVERRIDE + "]"
-	// log.Printf("TURN_SERVER_OVERRIDE:%s", TURN_SERVER_OVERRIDE)
+	log.Printf("TURN_SERVER_OVERRIDE: %s", TURN_SERVER_OVERRIDE)
 
 	RoomList = make(map[string]*Room)
 	WebServeMux := http.NewServeMux()
 	WebServeMux.Handle("/css/", http.FileServer(http.Dir("./")))
 	WebServeMux.Handle("/js/", http.FileServer(http.Dir("./")))
 	WebServeMux.Handle("/images/", http.FileServer(http.Dir("./")))
-	WebServeMux.Handle("/callstats/", http.FileServer(http.Dir("./")))
 	WebServeMux.Handle("/favicon.ico", http.FileServer(http.Dir("./")))
 	WebServeMux.Handle("/manifest.json", http.FileServer(http.Dir("./html/")))
 
+	WebServeMux.HandleFunc("/r/iceconfig", iceconfigPageHandler)
+	WebServeMux.HandleFunc("/r/iceconfig/", iceconfigPageHandler)
 	WebServeMux.HandleFunc("/r/", roomPageHandler)
 	WebServeMux.HandleFunc("/join/", joinPageHandler)
 	WebServeMux.HandleFunc("/leave/", leavePageHandler)
@@ -750,17 +699,13 @@ func main() {
 	WebServeMux.HandleFunc("/iceconfig/", iceconfigPageHandler)
 	WebServeMux.HandleFunc("/", mainPageHandler)
 
-	c := collider.NewCollider(*roomSrv)
+	// c := collider.NewCollider(*roomSrv)
+	c := collider.NewCollider("")
 	c.AddHandle(WebServeMux)
 	// go c.Run(wssHostPort, wsHostPort, *CERT, *KEY)
 
 	var e error
 
-	httpsPstr := ":" + strconv.Itoa(httpsHostPort)
-	httpPstr := ":" + strconv.Itoa(httpHostPort)
-	// log.Println("Starting webrtc demo on port:", webHostPort, " tls:", useTls)
-	//    1Dj9XZ5fwvKS6YoQZOoORcFnXaI=
-	// log.Println("hmac:", Hmac("my_secret", "1433895918506:my_user_name"))
 	if len(*CERT) > 0 && len(*KEY) > 0 {
 		config := &tls.Config{
 			// Only allow ciphers that support forward secrecy for iOS9 compatibility:
@@ -776,13 +721,13 @@ func main() {
 			},
 			PreferServerCipherSuites: true,
 		}
-		log.Println("Starting webrtc demo on https port:", httpsHostPort)
-		server := &http.Server{Addr: httpsPstr, Handler: WebServeMux, TLSConfig: config}
+		log.Println("Starting webrtc demo on https address", httpsHostPort)
+		server := &http.Server{Addr: httpsHostPort, Handler: WebServeMux, TLSConfig: config}
 		go server.ListenAndServeTLS(*CERT, *KEY)
 	}
 
-	log.Println("Starting webrtc demo on http port:", httpHostPort)
-	e = http.ListenAndServe(httpPstr, WebServeMux)
+	log.Println("Starting webrtc demo on http address", httpHostPort)
+	e = http.ListenAndServe(httpHostPort, WebServeMux)
 	if e != nil {
 		log.Fatal("Run: " + e.Error())
 	}
