@@ -211,7 +211,7 @@ func roomPageHandler(w http.ResponseWriter, r *http.Request) {
 	// t, err := template.ParseFiles("./html/params.html")
 	if err != nil {
 		log.Println(err)
-		log.Println("index template render error:",err.Error())
+		log.Println("index template render error:", err.Error())
 		w.WriteHeader(500)
 		w.Write([]byte(err.Error()))
 		return
@@ -221,9 +221,9 @@ func roomPageHandler(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		if room.GetOccupancy() >= 2 {
 			t, err = template.ParseFiles("./html/full_template.html")
-			if err!=nil{
+			if err != nil {
 
-				log.Println("full template render error:",err.Error())
+				log.Println("full template render error:", err.Error())
 				w.WriteHeader(500)
 				w.Write([]byte(err.Error()))
 				return
@@ -470,7 +470,7 @@ func iceconfigPageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(*flagTurnSecret) > 0 {
-			timestamp := time.Now().Unix() + 60*60
+			timestamp := time.Now().Unix() + 60*60*24
 			turnUsername := strconv.Itoa(int(timestamp)) + ":" + *flagTurnUser
 			expectedMAC := Hmac(*flagTurnSecret, turnUsername)
 			turnServer += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, turnUsername, expectedMAC)
@@ -629,6 +629,7 @@ var flagturn = flag.String("turn", "", "turn server host:port")
 var flagTurnUser = flag.String("turn-username", "username", "turn server username")
 var flagTurnPassword = flag.String("turn-password", "password", "turn server user password")
 var flagTurnSecret = flag.String("turn-static-auth-secret", "", "turn server static auth secret")
+
 // var roomSrv = flag.String("room-server", "https://appr.tc", "origin of room server")
 
 var CERT = flag.String("cert", "./fullchain.pem", "https cert pem file")
@@ -666,7 +667,7 @@ func main() {
 		}
 
 		if len(*flagTurnSecret) > 0 {
-			timestamp := time.Now().Unix() + 60*60
+			timestamp := time.Now().Unix() + 60*60*24
 			turnUsername := strconv.Itoa(int(timestamp)) + ":" + *flagTurnUser
 			expectedMAC := Hmac(*flagTurnSecret, turnUsername)
 			TURN_SERVER_OVERRIDE += fmt.Sprintf(TURN_SERVER_FMT, *flagturn, turnUsername, expectedMAC)
@@ -690,7 +691,7 @@ func main() {
 	WebServeMux.HandleFunc("/leave/", leavePageHandler)
 	WebServeMux.HandleFunc("/message/", messagePageHandler)
 	WebServeMux.HandleFunc("/params.html", paramsHTMLPageHandler)
-	WebServeMux.HandleFunc("/params.htm" , paramsHTMLPageHandler)
+	WebServeMux.HandleFunc("/params.htm", paramsHTMLPageHandler)
 	WebServeMux.HandleFunc("/params", paramsPageHandler)
 	WebServeMux.HandleFunc("/params/", paramsPageHandler)
 	WebServeMux.HandleFunc("/a/", aPageHandler)
