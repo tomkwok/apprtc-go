@@ -252,7 +252,10 @@ func addClientToRoom(r *http.Request, room_id, client_id string, is_loopback boo
 	occupancy := room.GetOccupancy()
 
 	if occupancy >= 2 {
-		error = RESPONSE_ROOM_FULL
+		// error = RESPONSE_ROOM_FULL
+		room = NewRoom(room_id)
+		RoomList[room_id] = room
+		occupancy = room.GetOccupancy()
 	}
 	if room.HasClient(client_id) {
 		error = RESPONSE_DUPLICATE_CLIENT
