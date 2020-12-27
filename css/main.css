@@ -86,13 +86,13 @@ div.warning {
   width: 100%;
 }
 
-#videos.active {
+/* #videos.active {
   -moz-transform: rotateY(180deg);
   -ms-transform: rotateY(180deg);
   -o-transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
   transform: rotateY(180deg);
-}
+} */
 
 footer > div {
   background-color: black;
@@ -154,7 +154,7 @@ label {
 
 #mini-video {
   border: 1px solid gray;
-  bottom: 20px;
+  bottom: 100px;
   left: 20px;
   /* video div is flipped horizontally when active*/
   max-height: 17%;
@@ -177,11 +177,11 @@ label {
   object-fit: cover;  /* no letterboxing */
   opacity: 0;
   position: absolute;
-  -moz-transform: rotateY(180deg);
+  /* -moz-transform: rotateY(180deg);
   -ms-transform: rotateY(180deg);
   -o-transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
-  transform: rotateY(180deg);
+  transform: rotateY(180deg); */
   transition: opacity 1s;
   width: 100%;
 }
@@ -306,9 +306,10 @@ p {
 /*////// icons CSS start ////////////////////////*/
 
 #icons {
-  bottom: 77px;
+  top: 6vw;
   left: 6vw;
   position: absolute;
+  z-index: 100;
 }
 
 circle {
