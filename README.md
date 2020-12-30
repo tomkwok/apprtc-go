@@ -11,6 +11,7 @@ This fork of mine includes the following changes:
 - Removed redundant command line options, comments and code in Go server
 - Added more detailed documentation and usage example
 - Updated `.gitignore` to ignore binary `apprtc-go` built
+- Removed flip and rotate transform on videos in CSS used for animation to reduce unnecessary load on browser
 - (Todo) Rewrite Go server `apprtc.go` to re-organize code
 
 Note that the official AppRTC documentation for query parameters to the web app can be found on the hosted site at `/params.html`.
